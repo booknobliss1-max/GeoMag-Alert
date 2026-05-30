@@ -293,31 +293,33 @@ async function fetchSolarFlares() {
 
 // NOAA SWPC — Kp INDEX
 async function fetchKp() {
-  const url = "https://services.swpc.noaa.gov/text/estimated-planetary-k-index.txt";
+  const url = "https://services.swpc.noaa.gov/json/planetary_k_index_1m.json";
 
   try {
     const res = await fetch(url);
-    const text = await res.text();
-    const lines = text.trim().split("\n").filter(l=>!l.startsWith(":"));
-    const last = lines[lines.length-1].trim().split(/\s+/);
-    const kp = parseFloat(last[last.length-1]);
+    const data = await res.json();
+
+    // Last entry is the most recent Kp estimate
+    const latest = data[data.length - 1];
+    const kp = latest.kp_index;
 
     const fill = document.getElementById("kpFill");
-    fill.style.transform = `scaleX(${kp/9})`;
+    fill.style.transform = `scaleX(${kp / 9})`;
     fill.style.background = kp >= 6 ? "var(--kp-high)" :
                             kp >= 4 ? "var(--kp-mid)" : "var(--kp-low)";
 
     document.getElementById("kpText").textContent =
-      `Kp ≈ ${kp} — ${kp>=6?"Storm":kp>=4?"Active":"Quiet"}`;
+      `Kp ≈ ${kp} — ${kp >= 6 ? "Storm" : kp >= 4 ? "Active" : "Quiet"}`;
 
-    // ALERTS
+    // Alerts
     if (lastKp !== kp) {
       if (kp >= 6) showAlert("⚠️ Geomagnetic storm conditions (Kp ≥ 6)");
       if (kp >= 4 && kp < 6) showAlert("⚠️ Active geomagnetic field (Kp ≥ 4)");
       lastKp = kp;
     }
 
-  } catch {
+  } catch (err) {
+    console.error(err);
     document.getElementById("kpText").textContent = "Error loading Kp index.";
   }
 }
