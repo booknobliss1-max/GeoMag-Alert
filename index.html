@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Domes & Dashboards · Space Weather Ambient Installation</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<style>
+:root {
+  --bg1: #020617;
+  --bg2: #0f172a;
+  --flare-color: #f97316;
+  --calm-color: #22c55e;
+  --storm-color: #ef4444;
+  --kp-low: #22c55e;
+  --kp-mid: #eab308;
+  --kp-high: #ef4444;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+  --accent: #38bdf8;
+  --panel: #020617cc;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at top, #1e293b 0, #020617 55%, #000 100%);
+  height: 100vh;
+  overflow: hidden;
+}
+
+#ambient-bg {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 20% 0%, var(--bg2), var(--bg1));
+  transition: background 2s ease;
+  z-index: -1;
+}
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 16px;
+  gap: 12px;
+}
+
+.header-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.header-sub {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.main-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 12px;
+}
+
+.panel {
+  background: var(--panel);
+  border-radius: 16px;
+  border: 1px solid #1f2937;
+  padding: 16px 18px;
+  box-shadow: 0 18px 45px rgba(0,0,0,0.45);
+  backdrop-filter: blur(12px);
+}
+
+.heartbeat-ring {
+  width: 180px;
+  height: 180px;
+  border-radius: 999px;
+  margin: 0 auto;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle, #0b1120 0, #020617 60%, #000 100%);
+}
+
+.heartbeat-pulse {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 999px;
+  border: 2px solid rgba(248, 250, 252, 0.08);
+  animation: pulse 4s infinite ease-in-out;
+}
+
+.heartbeat-core {
+  width: 70px;
+  height: 70px;
+  border-radius: 999px;
+  background: radial-gradient(circle, #f97316 0, #b91c1c 60%, #020617 100%);
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(0.9); opacity: 0.4; }
+  50% { transform: scale(1.1); opacity: 1; }
+}
+
+.kp-strip {
+  margin-top: 10px;
+  display: flex;
+  gap: 4px;
+}
+
+.kp-bar {
+  flex: 1;
+  height: 14px;
+  border-radius: 999px;
+  background: #020617;
+  overflow: hidden;
+  position: relative;
+}
+
+.kp-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 1s ease, background 1s ease;
+}
+
+.event-list {
+  margin-top: 12px;
+  max-height: 160px;
+  overflow-y: auto;
+  padding-right: 4px;
+  font-size: 0.8rem;
+}
+
+.event-item {
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+#alertBox {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #b91c1c;
+  color: white;
+  padding: 12px 18px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  display: none;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  z-index: 9999;
+}
+</style>
+</head>
+
+<body>
+<div id="ambient-bg"></div>
+<div id="alertBox"></div>
+
+<div class="wrapper">
+  <header>
+    <div class="header-title">Domes & Dashboards · Space Weather Ambient Installation</div>
+    <div class="header-sub">NASA DONKI + NOAA SWPC · Real-Time Civic Ambient Data Art</div>
+  </header>
+
+  <main class="main-grid">
+    <section class="panel">
+      <div class="heartbeat-ring">
+        <div id="heartbeatPulse" class="heartbeat-pulse"></div>
+        <div class="heartbeat-core"></div>
+      </div>
+
+      <div id="heartbeatText" style="text-align:center;margin-top:10px;color:var(--muted);">
+        Loading solar flare data...
+      </div>
+
+      <div id="flareMeta" style="text-align:center;font-size:0.8rem;margin-top:6px;"></div>
+
+      <div style="margin-top:20px;font-size:0.8rem;color:var(--muted);">Geomagnetic Field (Kp Index)</div>
+      <div class="kp-strip">
+        <div class="kp-bar"><div id="kpFill" class="kp-fill"></div></div>
+      </div>
+      <div id="kpText" style="text-align:center;margin-top:6px;font-size:0.8rem;color:var(--muted);">
+        Fetching Kp index...
+      </div>
+
+      <div style="margin-top:20px;font-size:0.8rem;color:var(--muted);">Recent Solar Events</div>
+      <div id="eventList" class="event-list"></div>
+    </section>
+
+    <section class="panel">
+      <h3 style="margin-top:0;">Civic Interpretation</h3>
+      <p style="font-size:0.85rem;color:var(--muted);">
+        This installation transforms real-time space weather into a living civic signal.
+        Solar flares, geomagnetic storms, and auroral activity become visible, ambient,
+        and emotionally legible for communities.
+      </p>
+
+      <ul style="font-size:0.85rem;">
+        <li>Orb pulses = solar flare intensity</li>
+        <li>Wall color = geomagnetic storm level</li>
+        <li>Floor map = auroral oval + CME propagation</li>
+        <li>Alerts = major space weather events</li>
+      </ul>
+    </section>
+  </main>
+</div>
+
+<script>
+// NASA + NOAA CONFIG
+const NASA_API_KEY = "DEMO_KEY";
+let lastFlareClass = null;
+let lastKp = null;
+
+// ALERT SYSTEM
+function showAlert(msg) {
+  const box = document.getElementById("alertBox");
+  box.textContent = msg;
+  box.style.display = "block";
+  setTimeout(() => box.style.display = "none", 12000);
+}
+
+// AMBIENT BACKGROUND
+function setAmbient(level) {
+  const bg = document.getElementById("ambient-bg");
+  if (level === "storm") {
+    bg.style.background = "radial-gradient(circle at 20% 0%, #7f1d1d, #020617 55%, #000 100%)";
+  } else if (level === "active") {
+    bg.style.background = "radial-gradient(circle at 20% 0%, #0f766e, #020617 55%, #000 100%)";
+  } else {
+    bg.style.background = "radial-gradient(circle at 20% 0%, #1e293b, #020617 55%, #000 100%)";
+  }
+}
+
+// NASA DONKI — SOLAR FLARES
+async function fetchSolarFlares() {
+  const start = new Date(Date.now() - 3*24*60*60*1000).toISOString().slice(0,10);
+  const url = `https://api.nasa.gov/DONKI/FLR?startDate=${start}&api_key=${NASA_API_KEY}`;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (!data.length) {
+      document.getElementById("heartbeatText").textContent = "Sun is calm.";
+      setAmbient("calm");
+      return;
+    }
+
+    data.sort((a,b)=>new Date(b.peakTime)-new Date(a.peakTime));
+    const flare = data[0];
+    const classType = flare.classType || "Unknown";
+
+    document.getElementById("heartbeatText").textContent =
+      `Latest flare: ${classType} · ${new Date(flare.peakTime).toLocaleString()}`;
+
+    document.getElementById("flareMeta").textContent =
+      `Source: ${flare.sourceLocation || "Unknown"}`;
+
+    // ALERTS
+    if (lastFlareClass !== classType) {
+      if (classType.startsWith("X")) showAlert("⚠️ X-class solar flare detected");
+      if (classType.startsWith("M")) showAlert("⚠️ M-class solar flare detected");
+      lastFlareClass = classType;
+    }
+
+    // ACTIVITY LEVEL
+    if (classType.startsWith("X")) setAmbient("storm");
+    else if (classType.startsWith("M")) setAmbient("active");
+    else setAmbient("calm");
+
+    // EVENT LIST
+    const list = document.getElementById("eventList");
+    list.innerHTML = "";
+    data.slice(0,10).forEach(evt=>{
+      list.innerHTML += `
+        <div class="event-item">
+          <div><strong>${evt.classType}</strong> flare</div>
+          <div style="color:var(--muted);font-size:0.75rem;">
+            ${new Date(evt.peakTime).toLocaleString()} · ${evt.sourceLocation}
+          </div>
+        </div>`;
+    });
+
+  } catch {
+    document.getElementById("heartbeatText").textContent = "Error loading flare data.";
+  }
+}
+
+// NOAA SWPC — Kp INDEX
+async function fetchKp() {
+  const url = "https://services.swpc.noaa.gov/text/estimated-planetary-k-index.txt";
+
+  try {
+    const res = await fetch(url);
+    const text = await res.text();
+    const lines = text.trim().split("\n").filter(l=>!l.startsWith(":"));
+    const last = lines[lines.length-1].trim().split(/\s+/);
+    const kp = parseFloat(last[last.length-1]);
+
+    const fill = document.getElementById("kpFill");
+    fill.style.transform = `scaleX(${kp/9})`;
+    fill.style.background = kp >= 6 ? "var(--kp-high)" :
+                            kp >= 4 ? "var(--kp-mid)" : "var(--kp-low)";
+
+    document.getElementById("kpText").textContent =
+      `Kp ≈ ${kp} — ${kp>=6?"Storm":kp>=4?"Active":"Quiet"}`;
+
+    // ALERTS
+    if (lastKp !== kp) {
+      if (kp >= 6) showAlert("⚠️ Geomagnetic storm conditions (Kp ≥ 6)");
+      if (kp >= 4 && kp < 6) showAlert("⚠️ Active geomagnetic field (Kp ≥ 4)");
+      lastKp = kp;
+    }
+
+  } catch {
+    document.getElementById("kpText").textContent = "Error loading Kp index.";
+  }
+}
+
+// INIT
+fetchSolarFlares();
+fetchKp();
+setInterval(fetchSolarFlares, 10*60*1000);
+setInterval(fetchKp, 10*60*1000);
+</script>
+
+</body>
+</html>
