@@ -286,13 +286,10 @@ No significant events recorded yet.
 </div>
 
 <div class="button-row">
-<button onclick="clearJournal()">
-Clear Journal
-</button>
-
-<button onclick="exportJournal()">
-Export Journal
-</button>
+  <!-- The Clear button has been removed to preserve history -->
+  <button onclick="exportJournal()">
+    Export Journal
+  </button>
 </div>
 
 <h3 style="margin-top:8px;">
@@ -374,19 +371,6 @@ journal.map(entry=>`
 
 }
 
-function clearJournal(){
-
-if(confirm("Clear journal?")){
-
-localStorage.removeItem(
-"spaceWeatherJournal"
-);
-
-renderJournal();
-
-}
-
-}
 
 function exportJournal(){
 
